@@ -120,7 +120,7 @@ def main(args):
         stride = [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]]
         padding = [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
         size = [32, 16, 8, 4]
-        embed_dims = [32, 64, 128, 256, 320, 512, 1024]
+        embed_dims = [16, 32, 64, 128, 256, 320, 512]
         net = LowTransformer(kernel_size=kernel_size, stride=stride, padding=padding, embed_dims=embed_dims, size=size).to(device)
     elif args.model_name == 'MedViT':
         net = MedViT_small().to(device)

@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from ignite.engine import Events, _prepare_batch, create_supervised_evaluator, create_supervised_trainer
 from ignite.handlers import EarlyStopping, ModelCheckpoint
+from thop import profile
 
 import monai
 from monai.data import decollate_batch, DataLoader
@@ -75,12 +76,15 @@ parser.add_argument('--save-every', dest='save_every',
                     type=int, default=20)
 
 
-def params(net):
-    param= sum([p.numel() for p in net.parameters()])
+def params_thop(net, device, input_shape=(1, 1, 256, 256, 256)):
+    net.eval()
+    x = torch.randn(*input_shape).to(device)
+    with torch.no_grad():
+        flops, params = profile(net, inputs=(x,), verbose=False)
     print('='*18)
-    print("params:", param / 1e6, "M")
+    print("THOP Params:", params / 1e6, "M")
+    print("THOP FLOPs :", flops / 1e9, "G")
     print('='*18)
-
 def main(args):
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
@@ -119,17 +123,17 @@ def main(args):
         net = VGG11().to(device) 
     elif args.model_name == 'PCM':
         kernel_size = [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]]
-        stride = [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]]
-        padding = [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
+        stride      = [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]]
+        padding     = [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
         size = [32, 16, 8, 4]
-        embed_dims = [16, 32, 64,128, 256, 320, 512]
+        embed_dims = [16, 32, 64, 128, 256, 320, 512]
         net = LowTransformer(kernel_size=kernel_size, stride=stride, padding=padding, embed_dims=embed_dims, size=size).to(device)
         
         
     elif args.model_name == 'MambaIDH':
         net = MambaIDH_T(2,1).to(device)
       
-    params(net)
+    params_thop(net, device, input_shape=(1,1,256,256,256))
     loss = torch.nn.CrossEntropyLoss()
     lr = args.lr
     opt = torch.optim.Adam(net.parameters(), lr)

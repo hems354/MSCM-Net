@@ -57,10 +57,7 @@ def main():
     model.load_state_dict(weights, strict=False)
     model.eval()
 
-    # target_layers = [model.cls_head.global_pool]   ###########################################################
-    # target_layers = [model.layers[2].downsample.proj]
     target_layers = [model.layers[3].blocks[-1].conv_block.conv2.conv]
-    # target_layers = [model.stem[2].conv2.conv]
 
     img_path = "/home/wangyh/Codes/pCR/data/Z12B.npy" 
     assert os.path.exists(img_path), f"文件不存在: {img_path}"
@@ -99,18 +96,7 @@ def main():
     )
     
     plt.figure(figsize=(10, 10))
-    
-    # plt.subplot(1, 3, 1)
-    # plt.imshow(img_slice, cmap='gray')
-    # plt.title(f"Original MRI Slice (Slice {slice_idx})")
-    # plt.axis('off')
-    
-    # plt.subplot(1, 3, 2)
-    # plt.imshow(cam_slice, cmap='jet')
-    # plt.title("GradCAM Attention Map")
-    # plt.axis('off')
-    
-    # plt.subplot(1, 3, 3)
+
     plt.imshow(visualization)
     plt.title("Overlay")
     plt.axis('off')

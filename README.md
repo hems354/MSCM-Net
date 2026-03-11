@@ -34,6 +34,5 @@ Run the testing script:
 ```python test.py```
 ## Grad-CAM Visualization
 
-To generate Grad-CAM3D visualization: 
-
-```python GradCAM3D.py```
+Grad-CAM visualization can be implemented based on the `pytorch_grad_cam` package.  
+Specifically, users can refer to the `GradCAM` function provided in the `pytorch_grad_cam` library and adapt it for the MSCM-Net architecture to generate 3D activation maps for model interpretation.

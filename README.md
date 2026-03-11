@@ -9,7 +9,6 @@ The code for training, testing, and visualization of the MSCM-Net model for path
 monai  
 numpy  
 torch  
-ignite  
 scipy  
 matplotlib  
 pytorch-grad-cam  

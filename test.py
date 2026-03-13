@@ -25,7 +25,6 @@ from dataset import LungCancerDataset
 
 import monai
 from monai.data import DataLoader
-# from SegMamba.model_segmamba.segmamba import CLS_Mamba
 from monai.handlers import CheckpointLoader, ClassificationSaver, StatsHandler
 from monai.transforms import Compose, LoadImaged, Resized, ScaleIntensityd
 from models import nnMambaSeg
@@ -100,7 +99,6 @@ def main(args):
 
 
     device = torch.device(args.device)
-    # net = CLS_Mamba(num_classes=2, in_chans=1).to(device)
     if args.model_name == 'ResNet':
         net = generate_model(18).to(device)
     elif args.model_name == 'nnMamba':
@@ -117,8 +115,8 @@ def main(args):
         net = GoogLeNet(num_classes=2, aux_logits=False).to(device)
     elif args.model_name == 'PCM':
         kernel_size = [[3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3], [3, 3, 3]]
-        stride = [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]]
-        padding = [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
+        stride      = [[2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2], [2, 2, 2]]
+        padding     = [[1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]]
         size = [32, 16, 8, 4]
         embed_dims = [16, 32, 64, 128, 256, 320, 512]
         net = LowTransformer(kernel_size=kernel_size, stride=stride, padding=padding, embed_dims=embed_dims, size=size).to(device)
@@ -142,12 +140,9 @@ def main(args):
             "Precision": Precision(output_transform=thresholded_output_transform),
             "Recall": Recall(output_transform=thresholded_output_transform),
             "ROC_AUC": ROC_AUC(),
-            # "ConfusionMatrix": ConfusionMatrix(num_classes=2),
-            # "SENS": Recall(output_transform=thresholded_output_transform)  # Sensitivity 和 Recall 是相同的
+
         }
-        # Ignite evaluator expects batch=(img, label) and returns output=(y_pred, y) at every iteration,
-        # user can add output_transform to return other values
-        # evaluator = create_supervised_evaluator(net, val_metrics, device, True, prepare_batch=prepare_batch)
+
         post_label = Compose([AsDiscrete(to_onehot=2)])
         post_pred = Compose([Activations(softmax=True)])
         evaluator = create_supervised_evaluator(
@@ -162,14 +157,12 @@ def main(args):
             ),
         )
 
-        # add stats event handler to print validation stats via evaluator
         val_stats_handler = StatsHandler(
             name="evaluator",
-            output_transform=lambda x: None,  # no need to print loss value, so disable per iteration output
+            output_transform=lambda x: None,  
         )
         val_stats_handler.attach(evaluator)
 
-        # for the array data format, assume the 3rd item of batch data is the meta_data
         prediction_saver = ClassificationSaver(
             output_dir="tempdir",
             name="evaluator",
@@ -178,7 +171,6 @@ def main(args):
         )
         prediction_saver.attach(evaluator)
 
-        # the model was trained by "densenet_training_dict" example
         CheckpointLoader(load_path="./results/checkpoints/PCM_checkpoint_1770.pt", load_dict={"net": net}).attach(evaluator)
 
         evaluator.run(val_loader)
@@ -188,15 +180,5 @@ def main(args):
         
 
 if __name__ == "__main__":
-    # 我这里的Precision是所有真正为PCR的样本中，预测结果为PCR的比例
-    # 举例 测试集一共22个样本，指标依次为Metrics -- Accuracy: 0.8182 Precision: 0.8571 ROC_AUC: 0.8376 Recall: 0.6667 
-    # 混淆矩阵为 [[12  1] 
-    #           [ 3  6]]
-    # Precision = TP/(TP+FP) = 6/(6+1) = 0.8571
-    # Recall = TP/(TP+FN) = 6/(6+3) = 0.6667
-    # Accuracy = (TP+TN) / (TP+TN+FP+FN) = (12+6)/(12+6+1+3) = 0.8182
-    
-    
     args = parser.parse_args()
     main(args)
-    # cal_specificity()

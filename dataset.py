@@ -88,10 +88,7 @@ class LungCancerDataset():
         self.train_transforms = Compose(
             [
                 LoadImaged(keys=["img"], ensure_channel_first=True),
-                # EnsureTyped(keys=["img"], dtype=torch.float32, track_meta=False),
                 ScaleIntensityd(keys=["img"]),
-                # Resized(keys=["img"], spatial_size=[48, 256, 256]),
-                # Resized(keys=["img"], spatial_size=[224, 224, 224]),
                 Resized(keys=["img"], spatial_size=[256, 256, 256]),
                 CustomRandAugmentd(keys=["img"], prob=0.5)
             ],
@@ -101,10 +98,7 @@ class LungCancerDataset():
         self.val_transforms = Compose(
             [
                 LoadImaged(keys=["img"], ensure_channel_first=True),
-                # EnsureTyped(keys=["img"], track_meta=False),
                 ScaleIntensityd(keys=["img"]),
-                # Resized(keys=["img"], spatial_size=[48, 256, 256]),
-                # Resized(keys=["img"], spatial_size=[224, 224, 224]),
                 Resized(keys=["img"], spatial_size=[256, 256, 256]),
             ]
         )

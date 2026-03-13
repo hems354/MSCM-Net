@@ -28,7 +28,7 @@ from models.VGG3D import VGG11
 from models.CNN_Mamba.LowTransformer import LowTransformer
 from models.MambaIDH import MambaIDH_T
 from models.MedViT3D import MedViT_small
-
+from torch.optim.lr_scheduler import PolynomialLR
 
 parser = argparse.ArgumentParser(description='PCR Progonsis for Lung Cancer in Pytorch')
 
@@ -102,7 +102,6 @@ def main(args):
                               shuffle=True, num_workers=args.workers, pin_memory=torch.cuda.is_available())
 
     device = torch.device(args.device)
-    # net = CLS_Mamba(num_classes=2, in_chans=1).to(device)
     if args.model_name == 'ResNet':
         net = generate_model(18).to(device)
     elif args.model_name == 'nnMamba':
@@ -136,11 +135,10 @@ def main(args):
     params_thop(net, device, input_shape=(1,1,256,256,256))
     loss = torch.nn.CrossEntropyLoss()
     lr = args.lr
-    #opt = torch.optim.Adam(net.parameters(), lr)
     opt = torch.optim.Adam(net.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-    # Ignite trainer expects batch=(img, label) and returns output=loss at every iteration,
-    # user can add output_transform to return other values, like: y_pred, y, etc.
+    schedule = PolynomialLR(opt, total_iters=args.epochs, power=0.9)
+
     def prepare_batch(batch, device=None, non_blocking=False):
         return _prepare_batch((batch["img"], batch["label"]), device, non_blocking)
     
@@ -171,19 +169,19 @@ def main(args):
         ),
     )
 
+    @trainer.on(Events.EPOCH_COMPLETED)
+    def update_lr(engine):
+        schedule.step()
+
     @trainer.on(Events.EPOCH_COMPLETED(every=args.validation_every_n_epochs))
     def run_validation(engine):
         evaluator.run(val_loader)
 
-    # adding checkpoint handler to save models (network params and optimizer stats) during training
     checkpoint_handler = ModelCheckpoint("./results/checkpoints/", args.model_name, n_saved=1, require_empty=False)
     trainer.add_event_handler(
         event_name=Events.EPOCH_COMPLETED, handler=checkpoint_handler, to_save={"net": net, "opt": opt}
     )
 
-    # StatsHandler prints loss at every iteration and print metrics at every epoch,
-    # we don't set metrics for trainer here, so just print loss, user can also customize print functions
-    # and can use output_transform to convert engine.state.output if it's not loss value
     train_stats_handler = StatsHandler(name="trainer", output_transform=lambda x: x)
     train_stats_handler.attach(trainer)
 
@@ -192,11 +190,9 @@ def main(args):
     log_dir = "./results/tensorboard/" + args.model_name
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-    # TensorBoardStatsHandler plots loss at every iteration and plots metrics at every epoch, same as StatsHandler
     train_tensorboard_stats_handler = TensorBoardStatsHandler(log_dir=log_dir, output_transform=lambda x: x)   # tag_name = type(net).__name__
     train_tensorboard_stats_handler.attach(trainer)
 
-    # add stats event handler to print validation stats via evaluator
     val_stats_handler = StatsHandler(
         name="evaluator",
         output_transform=lambda x: None,  # no need to print loss value, so disable per iteration output
@@ -204,7 +200,6 @@ def main(args):
     )  # fetch global epoch number from trainer
     val_stats_handler.attach(evaluator)
 
-    # add handler to record metrics to TensorBoard at every epoch
     val_tensorboard_stats_handler = TensorBoardStatsHandler(
         log_dir=log_dir,
         output_transform=lambda x: None,
@@ -221,6 +216,5 @@ def main(args):
 
 
 if __name__ == "__main__":
-    # 设置运行的显卡
     args = parser.parse_args()
     main(args)
